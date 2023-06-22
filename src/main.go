@@ -83,7 +83,7 @@ func main() {
 	command := flag.Arg(0)
 
 	if command != "server" && command != "rebuild" && command != "rebalance" {
-		fmt.Println("Usage: ./mkv <server, rebuild, rebalance>")
+		fmt.Println("Usage: ./fastkv <server, rebuild, rebalance>")
 		flag.PrintDefaults()
 		return
 	}
