@@ -205,6 +205,8 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
+
+	// Case for GET and HEAD requests
 	case "GET", "HEAD":
 		rec := a.GetRecord(key)
 		var remote string
@@ -251,6 +253,8 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Location", remote)
 		w.Header().Set("Content-Length", "0")
 		w.WriteHeader(302)
+
+	// Case for POST requests
 	case "POST":
 		// check if we already have the key, and it's not deleted
 		rec := a.GetRecord(key)
@@ -269,7 +273,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte(`<InitiateMultipartUploadResult>
         <UploadId>` + uploadid + `</UploadId>
-      </InitiateMultipartUploadResult>`))
+		</InitiateMultipartUploadResult>`))
 		} else if r.URL.RawQuery == "delete" {
 			del, err := parseDelete(r.Body)
 			if err != nil {
@@ -324,6 +328,8 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("<CompleteMultipartUploadResult></CompleteMultipartUploadResult>"))
 			return
 		}
+
+	// Case for PUT requests
 	case "PUT":
 		// no empty values
 		if r.ContentLength == 0 {
@@ -359,9 +365,13 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			status := a.WriteToReplicas(key, r.Body, r.ContentLength)
 			w.WriteHeader(status)
 		}
+
+	// Case for DELETE and UNLINK requests
 	case "DELETE", "UNLINK":
 		status := a.Delete(key, r.Method == "UNLINK")
 		w.WriteHeader(status)
+
+	// Case for REBALANCE requests
 	case "REBALANCE":
 		rec := a.GetRecord(key)
 		if rec.deleted != NO {
