@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-import os
 import binascii
+import os
 import unittest
+
+import boto3
 import pyarrow as pa
 import pyarrow.parquet as pq
 from pyarrow import fs
-import boto3
 
 
 class TestS3Boto(unittest.TestCase):
@@ -43,7 +44,7 @@ class TestS3PyArrow(unittest.TestCase):
 
     def write_file(self, fn, dat):
         with self.s3.open_output_stream(fn) as f:
-        f.write(dat)
+            f.write(dat)
 
     def test_fileinfo(self):
         fn = self.get_fresh_key()+"-fileinfo"
@@ -93,6 +94,7 @@ class TestS3PyArrow(unittest.TestCase):
         tbl2 = pq.read_table(key, filesystem=self.s3)
         self.assertEqual(tbl, tbl2) # unclear what sort of equality this checks
         self.s3.delete_file(key)
+
 
 if __name__ == '__main__':
     unittest.main()
