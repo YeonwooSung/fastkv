@@ -12,14 +12,17 @@ import (
 	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
+
+	"github.com/YeonwooSung/fastkv/src/bloomfilter"
 )
 
 // *** App struct and methods ***
 
 type App struct {
-	db    *leveldb.DB
-	mlock sync.Mutex
-	lock  map[string]struct{}
+	db          *leveldb.DB
+	mlock       sync.Mutex
+	lock        map[string]struct{}
+	bloomfilter *bloomfilter.ScalableBloomFilter
 
 	// params
 	uploadids  map[string]bool
@@ -49,6 +52,17 @@ func (a *App) LockKey(key []byte) bool {
 }
 
 func (a *App) GetRecord(key []byte) Record {
+	// use bloom filter to minimize disk access
+	has_key, err := a.bloomfilter.Test(key)
+	if err != nil {
+		log.Printf("Bloom filter test failed: %s", err)
+		return Record{[]string{}, HARD, ""}
+	}
+	if !has_key {
+		return Record{[]string{}, HARD, ""}
+	}
+
+	// get the record from leveldb
 	data, err := a.db.Get(key, nil)
 	rec := Record{[]string{}, HARD, ""}
 	if err != leveldb.ErrNotFound {
@@ -57,8 +71,22 @@ func (a *App) GetRecord(key []byte) Record {
 	return rec
 }
 
+/**
+ * PutRecord adds a record to the database.
+ *
+ * @param key The key to add.
+ * @param rec The record to add.
+ * @return True if the record was added, false otherwise.
+ */
 func (a *App) PutRecord(key []byte, rec Record) bool {
-	return a.db.Put(key, fromRecord(rec), nil) == nil
+	// add key to bloom filter first
+	if err := a.bloomfilter.Add(key); err != nil {
+		log.Printf("Bloom filter add failed: %s", err)
+		return false
+	}
+
+	put_err := a.db.Put(key, fromRecord(rec), nil)
+	return put_err == nil
 }
 
 // *** Entry Point ***
@@ -109,7 +137,7 @@ func main() {
 	defer db.Close()
 
 	fmt.Printf("volume servers: %s\n", volumes)
-	a := App{db: db,
+	app := App{db: db,
 		lock:       make(map[string]struct{}),
 		uploadids:  make(map[string]bool),
 		volumes:    volumes,
@@ -122,10 +150,10 @@ func main() {
 	}
 
 	if command == "server" {
-		http.ListenAndServe(fmt.Sprintf(":%d", *port), &a)
+		http.ListenAndServe(fmt.Sprintf(":%d", *port), &app)
 	} else if command == "rebuild" {
-		a.Rebuild()
+		app.Rebuild()
 	} else if command == "rebalance" {
-		a.Rebalance()
+		app.Rebalance()
 	}
 }
