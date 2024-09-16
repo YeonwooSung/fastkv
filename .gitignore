@@ -23,3 +23,10 @@ go.work
 # compiled executable
 fastkv
 **/fastkv
+
+# Mac OS
+.DS_Store
+
+# vscode
+.vscode
+
