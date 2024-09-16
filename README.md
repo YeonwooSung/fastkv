@@ -6,6 +6,7 @@ A distributed fast and lightweight key value store.
 
 - [v] Implement the bloom filter for the key-value store
 - [ ] Implement the Zanzibar-like auth checking for security
+- [ ] Allow distributed system features (reference: [netflix/dynomite](https://github.com/Netflix/dynomite))
 
 ## Credits
 
